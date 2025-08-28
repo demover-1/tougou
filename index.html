@@ -6,7 +6,7 @@
 <title>予約システム</title>
 <style>
   body { font-family: sans-serif; padding: 20px; background-color: #f9f9f9; max-width: 800px; margin: auto; }
-  h2, h1 { text-align: center; color: #0f172a; }
+  h1, h2 { text-align: center; color: #0f172a; }
   .page { display: none; }
   .active { display: block; }
   .block-title { margin-top: 24px; font-size: 18px; font-weight: bold; color: #444; border-left: 4px solid #4CAF50; padding-left: 10px; margin-bottom: 10px; }
@@ -39,23 +39,32 @@
   .time-slot.unavailable { background-color: #e2e8f0; color: #64748b; border-color: #cbd5e1; cursor: default; box-shadow: none; }
   #selected-info { margin-top: 20px; font-weight: 700; font-size: 16px; text-align: center; color: #166534; }
 
+  /* 完了画面 */
   #completion-page { display: none; height: 100vh; background-color: #f9f9f9; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-size: 24px; color: #16a34a; padding: 20px; box-sizing: border-box; }
+
+  /* 戻るボタン */
+  .back-btn { background-color: #e2e8f0; color: #333; margin-top: 12px; }
+  .back-btn:hover { background-color: #b0c4de; color: white; }
 </style>
 </head>
 <body>
 
+<!-- メニュー選択ページ -->
 <div id="menu-page" class="page active">
   <h2>メニューを選択してください</h2>
   <div id="menu-container">読み込み中...</div>
   <button id="menu-next" disabled>次へ</button>
 </div>
 
+<!-- スタッフ選択ページ -->
 <div id="staff-page" class="page">
   <h2>担当スタッフを選択してください</h2>
   <div id="staff-container" class="staff-list">読み込み中...</div>
+  <button class="back-btn" id="staff-back">戻る</button>
   <button id="staff-next" disabled>次へ</button>
 </div>
 
+<!-- カレンダー・日時選択ページ -->
 <div id="calendar-page" class="page">
   <h1>予約したい日時を選択してください</h1>
   <div id="month-navigation">
@@ -69,16 +78,21 @@
     <div id="time-slots-container"></div>
   </div>
   <div id="selected-info">現在読み込み中です。カレンダーが表示されるまでお待ちください。</div>
+  <button class="back-btn" id="calendar-back">戻る</button>
   <button id="send-button" disabled>予約を送信する</button>
 </div>
 
-<div id="completion-page">予約が完了しました！<br>ご来店をお待ちしております。</div>
+<!-- 完了画面 -->
+<div id="completion-page">
+  予約が完了しました！<br>ご来店をお待ちしております。
+</div>
 
 <script>
 const webhookURL = "https://hook.eu2.make.com/8anawrwfconzdpic5voda2vcjg2ayjhi";
 const urlParams = new URLSearchParams(window.location.search);
 const userId = urlParams.get("userId");
 
+// 選択データ
 let selectedMenu = null;
 let selectedStaff = null;
 let selectedDateTime = null;
@@ -86,6 +100,7 @@ let selectedStart = null;
 let selectedEnd = null;
 let duration = 30;
 
+// ----- メニュー選択 -----
 const menuContainer = document.getElementById("menu-container");
 const menuNextBtn = document.getElementById("menu-next");
 let selectedMenuEl = null;
@@ -132,8 +147,10 @@ menuNextBtn.addEventListener("click", () => {
   loadStaffPage();
 });
 
+// ----- スタッフ選択 -----
 const staffContainer = document.getElementById("staff-container");
 const staffNextBtn = document.getElementById("staff-next");
+const staffBackBtn = document.getElementById("staff-back");
 let selectedStaffEl = null;
 
 function loadStaffPage() {
@@ -180,6 +197,12 @@ staffNextBtn.addEventListener("click", () => {
   initializeCalendar();
 });
 
+staffBackBtn.addEventListener("click", ()=>{
+  document.getElementById("staff-page").classList.remove("active");
+  document.getElementById("menu-page").classList.add("active");
+});
+
+// ----- カレンダー -----
 const calendarDiv = document.getElementById("calendar");
 const currentMonthLabel = document.getElementById("current-month-label");
 const prevBtn = document.getElementById("prev-month-btn");
@@ -189,6 +212,7 @@ const slotsContainer = document.getElementById("time-slots-container");
 const selectedInfo = document.getElementById("selected-info");
 const sendBtn = document.getElementById("send-button");
 const completionPage = document.getElementById("completion-page");
+const calendarBackBtn = document.getElementById("calendar-back");
 
 let reservedSlots = [];
 let startHour=8, startMinute=0, endHour=17, endMinute=0;
@@ -273,48 +297,34 @@ function initializeCalendar(){
 
 prevBtn.addEventListener("click",()=>{if(displayedMonth===0){ displayedMonth=11; displayedYear--; } else displayedMonth--; buildCalendar(displayedYear,displayedMonth);});
 nextBtn.addEventListener("click",()=>{if(displayedMonth===11){ displayedMonth=0; displayedYear++; } else displayedMonth++; buildCalendar(displayedYear,displayedMonth);});
+calendarBackBtn.addEventListener("click",()=>{ document.getElementById("calendar-page").classList.remove("active"); document.getElementById("staff-page").classList.add("active"); });
 
-sendBtn.addEventListener("click",async()=>{
-  if(!userId || !selectedMenu || !selectedStaff || !selectedDateTime || !selectedStart || !selectedEnd){
-    alert("情報が不足しています"); return;
-  }
-  sendBtn.disabled = true;
+// ----- 送信処理 -----
+sendBtn.addEventListener("click", async () => {
+  if(!selectedMenu || !selectedStaff || !selectedDateTime){ alert("全て選択してください"); return; }
+  sendBtn.disabled=true; sendBtn.textContent="送信中…";
+  const payload = {
+    userId,
+    メニュー: selectedMenu.メニュー名,
+    金額: selectedMenu.金額,
+    duration: selectedMenu.duration,
+    スタッフ: selectedStaff,
+    予約開始: selectedStart.toISOString(),
+    予約終了: selectedEnd.toISOString()
+  };
   try{
-    const res = await fetch(webhookURL,{
+    const res = await fetch(webhookURL, {
       method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        userId:userId,
-        message:"確定予約",
-        menu:selectedMenu,
-        staff:selectedStaff,
-        datetime:selectedDateTime,
-        start:selectedStart.toISOString(),
-        end:selectedEnd.toISOString(),
-        duration:duration,
-        Method:"POST"
-      })
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
     });
-    if(!res.ok) throw new Error("送信失敗");
-    document.getElementById("calendar-page").classList.remove("active");
-    completionPage.style.display="flex";
-    setTimeout(()=>{
-      completionPage.style.display="none";
-      resetAll();
-      document.getElementById("menu-page").classList.add("active");
-    },5000);
-  }catch(e){
-    alert("送信に失敗しました。もう一度お試しください。");
-    sendBtn.disabled = false;
+    if(res.ok){ document.getElementById("calendar-page").classList.remove("active"); completionPage.style.display="flex"; }
+    else{ throw new Error("送信失敗"); }
+  }catch(err){
+    alert("送信に失敗しました。再送信してください。");
+    sendBtn.disabled=false; sendBtn.textContent="予約を送信する";
   }
 });
-
-function resetAll(){
-  selectedMenu = null; selectedMenuEl?.classList.remove("selected"); selectedMenuEl=null;
-  selectedStaff=null; selectedStaffEl?.classList.remove("selected"); selectedStaffEl=null;
-  selectedDateTime=null; selectedStart=null; selectedEnd=null;
-  menuNextBtn.disabled=true; staffNextBtn.disabled=true; sendBtn.disabled=true;
-}
 </script>
 
 </body>
