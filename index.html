@@ -281,7 +281,7 @@ sendBtn.addEventListener("click",()=>{
   const endDateTime=endObj.toISOString();
   const startISO=startObj.toISOString();
   // GETリクエストで start と end を送信
-  const sendURL=`${webhookURL}?userId=${encodeURIComponent(userId)}&menu=${encodeURIComponent(selectedMenu.メニュー名)}&staff=${encodeURIComponent(selectedStaff)}&start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endDateTime)}`;
+  const sendURL=`${webhookURL}?userId=${encodeURIComponent(userId)}&menu=${encodeURIComponent(selectedMenu.メニュー名)}&staff=${encodeURIComponent(selectedStaff)}&start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endDateTime)&message="確定予約"}`;
   fetch(sendURL)
   .then(()=>{ showPage(3); })
   .catch(()=>{ alert("送信に失敗しました"); });
