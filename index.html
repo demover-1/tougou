@@ -359,7 +359,7 @@ nextBtn.addEventListener("click",()=>{
 // ------------- 送信 -------------
 sendBtn.addEventListener("click",()=>{
   if(!selectedMenu || !selectedStaff || !selectedStart || !selectedEnd) return;
-  const payload={userId,menu:selectedMenu,staff:selectedStaff,start:selectedStart,end:selectedEnd};
+  const payload={userId,menu:selectedMenu,staff:selectedStaff,start:selectedStart,end:selectedEnd,message:"確定予約"};
   fetch(webhookURL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
   .then(()=>{document.body.innerHTML=""; completionPage.style.display="flex"; document.body.appendChild(completionPage);})
   .catch(()=>alert("送信失敗"));
