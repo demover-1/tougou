@@ -7,7 +7,7 @@
 <style>
   body { font-family: sans-serif; padding: 20px; background-color: #f9f9f9; max-width: 800px; margin: auto; }
   h2, h1 { text-align: center; color: #0f172a; }
-  .page { display: none; padding-bottom: 80px; }
+  .page { display: none; }
   .active { display: block; }
   .block-title { margin-top: 24px; font-size: 18px; font-weight: bold; color: #444; border-left: 4px solid #4CAF50; padding-left: 10px; margin-bottom: 10px; }
   .menu-item { border-radius: 8px; background-color: #f0f0f0; padding: 12px 16px; margin-bottom: 12px; cursor: pointer; user-select: none; transition: background-color 0.3s ease; }
@@ -15,6 +15,9 @@
   .menu-item.selected { background-color: #4caf50; color: white; }
   .menu-title { font-size: 16px; font-weight: bold; }
   .menu-desc { font-size: 13px; margin-top: 4px; color: #333; padding-left: 8px; }
+  button { display: block; width: 100%; max-width: 600px; margin: 20px auto 0 auto; padding: 14px; font-size: 16px; border: none; border-radius: 10px; cursor: pointer; user-select: none; transition: background-color 0.3s ease; }
+  button:disabled { background-color: #cccccc; cursor: not-allowed; }
+  button:hover:not(:disabled) { background-color: #0056b3; color: white; }
   .staff-list { display: flex; flex-direction: column; gap: 20px; max-width: 600px; margin: 0 auto; }
   .staff-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 16px; display: flex; gap: 16px; align-items: flex-start; cursor: pointer; }
   .staff-card.selected { border: 2px solid #22c55e; }
@@ -50,33 +53,6 @@
     padding: 20px;
     box-sizing: border-box;
   }
-
-  /* 固定操作バー */
-  .action-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background: #fff;
-    padding: 12px 20px;
-    box-shadow: 0 -2px 8px rgba(0,0,0,0.15);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    box-sizing: border-box;
-  }
-  .action-bar button {
-    padding: 14px;
-    font-size: 16px;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    user-select: none;
-    transition: background-color 0.3s ease;
-  }
-  .action-bar button:disabled { background-color: #cccccc; cursor: not-allowed; }
-  .action-bar button:hover:not(:disabled) { background-color: #0056b3; color: white; }
-  .highlight { background-color: #22c55e !important; color: white; transform: scale(1.05); transition: all 0.3s; }
 </style>
 </head>
 <body>
@@ -85,12 +61,14 @@
 <div id="menu-page" class="page active">
   <h2>メニューを選択してください</h2>
   <div id="menu-container">読み込み中...</div>
+  <button id="menu-next" disabled>次へ</button>
 </div>
 
 <!-- スタッフ選択ページ -->
 <div id="staff-page" class="page">
   <h2>担当スタッフを選択してください</h2>
   <div id="staff-container" class="staff-list">読み込み中...</div>
+  <button id="staff-next" disabled>次へ</button>
 </div>
 
 <!-- カレンダー・日時選択ページ -->
@@ -107,6 +85,7 @@
     <div id="time-slots-container"></div>
   </div>
   <div id="selected-info">現在読み込み中です。カレンダーが表示されるまでお待ちください。</div>
+  <button id="send-button" disabled>予約を送信する</button>
 </div>
 
 <!-- 完了画面 -->
@@ -114,16 +93,8 @@
   予約が完了しました！<br>ご来店をお待ちしております。
 </div>
 
-<!-- 固定操作バー -->
-<div class="action-bar">
-  <button id="menu-next" disabled>次へ</button>
-  <button id="staff-next" disabled>次へ</button>
-  <button id="send-button" disabled>予約を送信する</button>
-  <button id="back-button">戻る</button>
-</div>
-
 <script>
-const webhookURL = "https://hook.eu2.make.com/8anawrwfconzdpic5voda2vcjg2ayjhi";
+const webhookURL = "https://hook.eu2.make.com/g0jzzvagjl1e7cefpn0er1gahsc1pwjo";
 const urlParams = new URLSearchParams(window.location.search);
 const userId = urlParams.get("userId");
 
@@ -135,12 +106,12 @@ let selectedStart = null;
 let selectedEnd = null;
 let duration = 30;
 
-// ------------- メニュー -------------
+// ---------------- メニュー ----------------
 const menuContainer = document.getElementById("menu-container");
 const menuNextBtn = document.getElementById("menu-next");
 let selectedMenuEl = null;
 
-fetch(`${webhookURL}?userId=${encodeURIComponent(userId)}&menu=true`)
+fetch(`${webhookURL}?userId=${encodeURIComponent(userId)}`)
 .then(res => res.json())
 .then(data => {
   menuContainer.innerHTML = "";
@@ -170,16 +141,19 @@ fetch(`${webhookURL}?userId=${encodeURIComponent(userId)}&menu=true`)
       selectedMenu = { メニュー名:title, 金額:price, duration:menuDuration };
       duration = menuDuration;
       menuNextBtn.disabled = false;
-      menuNextBtn.classList.add("highlight");
-      setTimeout(()=>menuNextBtn.classList.remove("highlight"),1200);
-      menuNextBtn.scrollIntoView({ behavior:"smooth", block:"center" });
     });
     menuContainer.appendChild(menuEl);
   });
 })
 .catch(()=>{menuContainer.innerHTML="メニュー取得失敗";});
 
-// ------------- スタッフ -------------
+menuNextBtn.addEventListener("click", () => {
+  document.getElementById("menu-page").classList.remove("active");
+  document.getElementById("staff-page").classList.add("active");
+  loadStaffPage();
+});
+
+// ---------------- スタッフ ----------------
 const staffContainer = document.getElementById("staff-container");
 const staffNextBtn = document.getElementById("staff-next");
 let selectedStaffEl = null;
@@ -214,9 +188,6 @@ function loadStaffPage() {
         selectedStaffEl = card;
         selectedStaff = nickname;
         staffNextBtn.disabled = false;
-        staffNextBtn.classList.add("highlight");
-        setTimeout(()=>staffNextBtn.classList.remove("highlight"),1200);
-        staffNextBtn.scrollIntoView({ behavior:"smooth", block:"center" });
       });
       staffContainer.appendChild(card);
     });
@@ -224,32 +195,14 @@ function loadStaffPage() {
   .catch(()=>{staffContainer.innerHTML="スタッフ取得失敗";});
 }
 
-// ------------- ページ遷移 -------------
-const pages = ["menu-page","staff-page","calendar-page"];
-let currentPageIndex = 0;
+staffNextBtn.addEventListener("click", () => {
+  if(!selectedStaff){ alert("スタッフを選択してください"); return; }
+  document.getElementById("staff-page").classList.remove("active");
+  document.getElementById("calendar-page").classList.add("active");
+  initializeCalendar();
+});
 
-function showPage(index){
-  pages.forEach((p,i)=>document.getElementById(p).classList.toggle("active",i===index));
-  currentPageIndex = index;
-  updateActionBar();
-  if(index===1) loadStaffPage();
-  if(index===2) initializeCalendar();
-}
-
-function updateActionBar(){
-  // 送信ボタンはカレンダーのみ
-  sendBtn.style.display = currentPageIndex===2 ? "block" : "none";
-  menuNextBtn.style.display = currentPageIndex===0 ? "block" : "none";
-  staffNextBtn.style.display = currentPageIndex===1 ? "block" : "none";
-}
-
-// 固定バーのボタンイベント
-menuNextBtn.addEventListener("click",()=>showPage(1));
-staffNextBtn.addEventListener("click",()=>showPage(2));
-const backBtn = document.getElementById("back-button");
-backBtn.addEventListener("click",()=>{ if(currentPageIndex>0) showPage(currentPageIndex-1); });
-
-// ------------- カレンダー -------------
+// ---------------- カレンダー ----------------
 const calendarDiv = document.getElementById("calendar");
 const currentMonthLabel = document.getElementById("current-month-label");
 const prevBtn = document.getElementById("prev-month-btn");
@@ -311,43 +264,69 @@ function showTimeSlots(dateStr){
     if(!isReserved) timeDiv.addEventListener("click",()=>{
       if(selectedTimeDiv) selectedTimeDiv.classList.remove("selected");
       timeDiv.classList.add("selected"); selectedTimeDiv=timeDiv;
-      selectedDateTime=dateStr;
-      selectedStart=`${hh}:${mm}`;
-      const endDate = new Date(current.getTime()+duration*60000);
-      selectedEnd = `${String(endDate.getHours()).padStart(2,"0")}:${String(endDate.getMinutes()).padStart(2,"0")}`;
+      selectedDateTime = `${dateStr} ${hh}:${mm}`;
+      selectedStart = new Date(current.getTime());
+      selectedEnd = new Date(selectedStart.getTime() + duration*60000);
+      selectedInfo.textContent=`選択中: ${selectedDateTime}`;
       sendBtn.disabled=false;
     });
     slotsContainer.appendChild(timeDiv);
-    current=new Date(current.getTime()+duration*60000);
+    current=new Date(current.getTime()+30*60000);
   }
 }
 
 function initializeCalendar(){
-  const now=new Date();
-  displayedYear=now.getFullYear(); displayedMonth=now.getMonth();
-  buildCalendar(displayedYear, displayedMonth);
+  if(!selectedStaff){ alert("スタッフが選択されていません"); return; }
+  displayedYear = today.getFullYear(); displayedMonth = today.getMonth();
+  fetch(`${webhookURL}?userId=${encodeURIComponent(userId)}&duration=${encodeURIComponent(duration)}&staff=${encodeURIComponent(selectedStaff)}`)
+  .then(res => res.json())
+  .then(data=>{
+    reservedSlots = data.map(d=>({start:d.start,end:d.end}));
+    if(data.length>0){
+      const first=data[0];
+      startHour=parseInt(first["開始時間"]||8,10);
+      startMinute=parseInt(first["開始分"]||0,10);
+      endHour=parseInt(first["終了時間"]||17,10);
+      endMinute=parseInt(first["終了分"]||0,10);
+    }
+    buildCalendar(displayedYear,displayedMonth);
+  })
+  .catch(()=>{selectedInfo.textContent="予約枠取得失敗";});
 }
-prevBtn.addEventListener("click", ()=>{ displayedMonth--; if(displayedMonth<0){ displayedMonth=11; displayedYear--; } buildCalendar(displayedYear, displayedMonth);});
-nextBtn.addEventListener("click", ()=>{ displayedMonth++; if(displayedMonth>11){ displayedMonth=0; displayedYear++; } buildCalendar(displayedYear, displayedMonth);});
 
-sendBtn.addEventListener("click", ()=>{
-  sendBtn.disabled=true; sendBtn.textContent="送信中...";
-  const payload = {
-    userId, menu:selectedMenu, staff:selectedStaff, date:selectedDateTime, start:selectedStart, end:selectedEnd,
-    message:"確定予約"
-  };
-  fetch(webhookURL,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify(payload)
-  }).then(r=>{ if(r.ok){ document.body.style.overflow="hidden"; showCompletion();} else throw new Error(); })
-  .catch(()=>{ alert("送信に失敗しました。もう一度お試しください"); sendBtn.disabled=false; sendBtn.textContent="予約を送信する"; });
+prevBtn.addEventListener("click",()=>{if(displayedMonth===0){ displayedMonth=11; displayedYear--; } else displayedMonth--; buildCalendar(displayedYear,displayedMonth);});
+nextBtn.addEventListener("click",()=>{if(displayedMonth===11){ displayedMonth=0; displayedYear++; } else displayedMonth++; buildCalendar(displayedYear,displayedMonth);});
+
+// ---------------- 送信 ----------------
+sendBtn.addEventListener("click",async()=>{
+  if(!userId || !selectedMenu || !selectedStaff || !selectedDateTime || !selectedStart || !selectedEnd){
+    alert("情報が不足しています"); return;
+  }
+  try{
+    await fetch(webhookURL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        userId:userId,
+        message:"確定予約",
+        menu:selectedMenu,
+        staff:selectedStaff,
+        datetime:selectedDateTime,
+        start:selectedStart.toISOString(),
+        end:selectedEnd.toISOString(),
+        duration:duration,
+        Method:"POST"
+      })
+    });
+  }catch(e){ console.error(e); }
+
+  // 0.5秒後に完了画面表示
+  setTimeout(()=>{
+    document.getElementById("calendar-page").classList.remove("active");
+    completionPage.style.height = window.innerHeight + "px";
+    completionPage.style.display = "flex";
+  }, 500);
 });
-
-function showCompletion(){ 
-  pages.forEach(p=>document.getElementById(p).classList.remove("active"));
-  completionPage.style.display="flex"; 
-}
 </script>
 
 </body>
