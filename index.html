@@ -111,7 +111,7 @@ const menuContainer = document.getElementById("menu-container");
 const menuNextBtn = document.getElementById("menu-next");
 let selectedMenuEl = null;
 
-fetch(`${webhookURL}?userId=${encodeURIComponent(userId)}`)
+fetch(`${webhookURL}?userId=${encodeURIComponent(userId)}&menu`)
 .then(res => res.json())
 .then(data => {
   menuContainer.innerHTML = "";
