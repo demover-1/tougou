@@ -36,7 +36,6 @@
   .time-slot.unavailable { background-color: #e2e8f0; color: #64748b; border-color: #cbd5e1; cursor: default; box-shadow: none; }
   #selected-info { margin-top: 20px; font-weight: 700; font-size: 16px; text-align: center; color: #166534; }
 
-  /* 完了画面 */
   #completion-page {
     display: none;
     height: 100vh;
@@ -51,7 +50,6 @@
     box-sizing: border-box;
   }
 
-  /* 固定操作バー */
   .action-bar {
     position: fixed;
     bottom: 0;
@@ -75,25 +73,21 @@
     transition: background-color 0.3s ease;
   }
   .action-bar button:disabled { background-color: #cccccc; cursor: not-allowed; }
-  .action-bar button:hover:not(:disabled) { background-color: #0056b3; color: white; }
   .highlight { background-color: #22c55e !important; color: white; transform: scale(1.05); transition: all 0.3s; }
 </style>
 </head>
 <body>
 
-<!-- メニュー選択ページ -->
 <div id="menu-page" class="page active">
   <h2>メニューを選択してください</h2>
   <div id="menu-container">読み込み中...</div>
 </div>
 
-<!-- スタッフ選択ページ -->
 <div id="staff-page" class="page">
   <h2>担当スタッフを選択してください</h2>
   <div id="staff-container" class="staff-list">読み込み中...</div>
 </div>
 
-<!-- カレンダー・日時選択ページ -->
 <div id="calendar-page" class="page">
   <h1>予約したい日時を選択してください</h1>
   <div id="month-navigation">
@@ -109,12 +103,10 @@
   <div id="selected-info">現在読み込み中です。カレンダーが表示されるまでお待ちください。</div>
 </div>
 
-<!-- 完了画面 -->
 <div id="completion-page">
   予約が完了しました！<br>ご来店をお待ちしております。
 </div>
 
-<!-- 固定操作バー -->
 <div class="action-bar">
   <button id="menu-next" disabled>次へ</button>
 </div>
@@ -124,7 +116,6 @@ const webhookURL = "https://hook.eu2.make.com/8anawrwfconzdpic5voda2vcjg2ayjhi";
 const urlParams = new URLSearchParams(window.location.search);
 const userId = urlParams.get("userId");
 
-// 選択データ
 let selectedMenu = null;
 let selectedStaff = null;
 let selectedDateTime = null;
@@ -132,13 +123,8 @@ let selectedStart = null;
 let selectedEnd = null;
 let duration = 30;
 
-// ボタン
 const menuNextBtn = document.getElementById("menu-next");
-const staffNextBtn = document.getElementById("staff-next");
-const sendBtn = document.getElementById("send-button");
-const backBtn = document.getElementById("back-button");
 
-// ------------- メニュー -------------
 const menuContainer = document.getElementById("menu-container");
 let selectedMenuEl = null;
 
@@ -181,54 +167,17 @@ fetch(`${webhookURL}?userId=${encodeURIComponent(userId)}&menu=true`)
 })
 .catch(()=>{menuContainer.innerHTML="メニュー取得失敗";});
 
-// ------------- スタッフ -------------
-const staffContainer = document.getElementById("staff-container");
-let selectedStaffEl = null;
+// ページ遷移
+const pages = ["menu-page","staff-page","calendar-page"];
+let currentPageIndex = 0;
 
-function loadStaffPage() {
-  staffContainer.innerHTML = "読み込み中...";
-  fetch(`${webhookURL}?userId=${encodeURIComponent(userId)}&kakutei=ssttff`)
-  .then(res => res.json())
-  .then(data => {
-    staffContainer.innerHTML = "";
-    data.forEach(staff=>{
-      const nickname = staff[2]||"";
-      const intro = staff[6]||"";
-      const imageUrl = staff[11]?`https://lh3.googleusercontent.com/d/${staff[11]}`:"";
-      const skill = staff[8]||"";
-      const fee = staff[9]||"";
-
-      const card = document.createElement("div");
-      card.className="staff-card";
-      card.innerHTML = `
-        <img src="${imageUrl}" class="staff-photo" alt="スタッフ写真">
-        <div class="staff-info">
-          <div class="nickname">${nickname}</div>
-          <div class="block-label">得意な技術</div><div>${skill}</div>
-          <div class="block-label">指名料</div><div>${fee}</div>
-          <div class="block-label">紹介文</div><div class="introduction">${intro}</div>
-        </div>
-      `;
-      card.addEventListener("click", ()=>{
-        if(selectedStaffEl) selectedStaffEl.classList.remove("selected");
-        card.classList.add("selected");
-        selectedStaffEl = card;
-        selectedStaff = nickname;
-        staffNextBtn.disabled = false;
-        staffNextBtn.classList.add("highlight");
-        setTimeout(()=>staffNextBtn.classList.remove("highlight"),1200);
-        staffNextBtn.scrollIntoView({ behavior:"smooth", block:"center" });
-      });
-      staffContainer.appendChild(card);
-    });
-  })
-  .catch(()=>{staffContainer.innerHTML="スタッフ取得失敗";});
+function showPage(index){
+  pages.forEach((p,i)=>document.getElementById(p).classList.toggle("active",i===index));
+  currentPageIndex = index;
 }
 
-// ページ遷移やカレンダー、送信などのスクリプトは既存のまま
-// （ここでは変更なしで省略）
+menuNextBtn.addEventListener("click",()=>showPage(1));
 
-// 初期表示
 showPage(0);
 </script>
 </body>
